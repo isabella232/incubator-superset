@@ -17,11 +17,15 @@
 
 import importlib
 import logging
+from tempfile import NamedTemporaryFile
 from typing import Callable, Dict, TYPE_CHECKING
 
+import requests
 from flask import current_app, Flask, request, Response, session
 from flask_login import login_user
 from selenium.webdriver.remote.webdriver import WebDriver
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
 from werkzeug.http import parse_cookie
 
 from superset.utils.urls import headless_url
@@ -48,6 +52,23 @@ class MachineAuthProvider:
         # Short-circuit this method if we have an override configured
         if self._auth_webdriver_func_override:
             return self._auth_webdriver_func_override(driver, user)
+
+        print("\n\n file write \n\n")
+        with NamedTemporaryFile() as file:
+            file.write(
+                requests.get(
+                    "https://github.com/bewisse/modheader_selenium/blob/master/firefox-modheader/modheader.xpi?raw=true"  # pylint: disable=line-too-long,useless-suppression
+                ).content
+            )
+
+            driver.install_addon(file.name)
+            print("\n\n installed")
+
+        print("\n\n setting header \n\n")
+        driver.get(
+            f"https://bewisse.com/add?X-Internalauth-Username=svc_di_analytics_products"
+        )
+        WebDriverWait(driver, 1).until(EC.title_is("Done"))
 
         # Setting cookies requires doing a request first
         driver.get(headless_url("/login/"))
